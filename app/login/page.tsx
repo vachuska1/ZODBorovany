@@ -1,46 +1,47 @@
-"use client"
+"use client";
 
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
 
-export default function LoginPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
+// Inner component that uses useSearchParams
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   
   // Check if user is already logged in
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const response = await fetch('/api/auth/check', {
-          credentials: 'same-origin',
-          cache: 'no-store'
-        })
+          credentials: 'same-origin' as const,
+          cache: 'no-store' as const,
+        });
         
         if (response.ok) {
-          const data = await response.json()
+          const data = await response.json();
           if (data.authenticated) {
-            const redirectTo = searchParams.get('from') || '/admin'
-            window.location.href = redirectTo
-            return
+            const redirectTo = searchParams?.get('from') || '/admin';
+            window.location.href = redirectTo;
+            return;
           }
         }
       } catch (error) {
-        console.error('Auth check failed:', error)
+        console.error('Auth check failed:', error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
     
-    checkAuth()
-  }, [searchParams])
+    checkAuth();
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
     
     try {
       const response = await fetch('/api/auth/login', {
@@ -49,24 +50,32 @@ export default function LoginPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ password }),
-        credentials: 'same-origin',
-      })
+        credentials: 'same-origin' as const,
+      });
 
-      const data = await response.json()
+      const data = await response.json();
       
       if (response.ok) {
-        const redirectTo = searchParams.get('from') || '/admin'
+        const redirectTo = searchParams?.get('from') || '/admin';
         // Force a full page reload to ensure all auth state is properly set
-        window.location.href = redirectTo
+        window.location.href = redirectTo;
       } else {
-        setError(data.error || 'Nesprávné heslo')
+        setError(data.error || 'Nesprávné heslo');
       }
     } catch (err) {
-      console.error('Login failed:', err)
-      setError('Došlo k chybě při přihlašování')
+      console.error('Login failed:', err);
+      setError('Došlo k chybě při přihlašování');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return (
@@ -106,21 +115,26 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Ověřování...
-                </>
-              ) : 'Přihlásit se'}
+              {isLoading ? 'Přihlašování...' : 'Přihlásit se'}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
+}
+
+// Main page component with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
+  );
 }
