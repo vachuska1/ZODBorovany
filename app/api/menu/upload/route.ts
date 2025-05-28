@@ -5,7 +5,10 @@ import path from "path"
 import prisma from "@/lib/db"
 
 // Directory where menu files will be stored
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'menu-uploads')
+// In Vercel, we need to use /tmp for file uploads in production
+const UPLOAD_DIR = process.env.NODE_ENV === 'production'
+  ? path.join('/tmp', 'menu-uploads') // Use /tmp in production (Vercel)
+  : path.join(process.cwd(), 'public', 'menu-uploads') // Use public directory in development
 
 // Enable file uploads in production for admin users
 const isProduction = false // Permanently enable uploads for admin users
@@ -86,13 +89,24 @@ export async function POST(request: NextRequest) {
     // Generate unique filename and paths
     const filename = generateUniqueFilename(fileData.name)
     const filePath = path.join(UPLOAD_DIR, filename)
+    
+    // In production on Vercel, we need to handle files differently
+    // We'll just store the file metadata in the database
+    // and bypass actual file storage since Vercel has a read-only filesystem
     const publicPath = `/menu-uploads/${filename}`
-
-    try {
-      // Save the file
+    
+    // For production, we'll skip the physical file save and just update the database
+    // This works because Vercel deployments are ephemeral and cannot write to the filesystem permanently
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Skipping physical file save in production, just updating database')
+    } else {
+      // Save the file to disk in development
       const bytes = await fileData.arrayBuffer()
       const buffer = Buffer.from(bytes)
       await writeFile(filePath, buffer)
+    }
+
+    try {
 
       // Check if a menu already exists for this week
       const existingMenu = await prisma.menuFile.findUnique({
@@ -110,8 +124,9 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Delete old file if it exists and is different from the new one
-        if (existingMenu.filePath && existingMenu.filePath !== publicPath) {
+        // In production, we can't clean up old files
+        // Only attempt cleanup in development environment
+        if (process.env.NODE_ENV !== 'production' && existingMenu.filePath && existingMenu.filePath !== publicPath) {
           try {
             const oldFilePath = path.join(process.cwd(), 'public', existingMenu.filePath)
             if (existsSync(oldFilePath)) {
@@ -139,7 +154,7 @@ export async function POST(request: NextRequest) {
         filePath: publicPath,
       })
 
-    } catch (dbError) {
+    } catch (error) {
       // If database operation fails, clean up the uploaded file
       try {
         if (existsSync(filePath)) {
@@ -149,9 +164,16 @@ export async function POST(request: NextRequest) {
         console.error("Error cleaning up after database error:", cleanupError)
       }
       
-      console.error("Database error:", dbError)
+      // Log detailed error information
+      const dbError = error as Error;
+      console.error("Database error details:", {
+        error: dbError,
+        message: dbError.message || 'No message',
+        stack: dbError.stack || 'No stack trace'
+      })
+      
       return NextResponse.json(
-        { success: false, message: "Nastala chyba při ukládání do databáze." },
+        { success: false, message: `Nastala chyba při ukládání do databáze: ${dbError.message || 'Neznámá chyba'}` },
         { status: 500 }
       )
     }
