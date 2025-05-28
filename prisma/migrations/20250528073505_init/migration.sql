@@ -1,11 +1,13 @@
 -- CreateTable
 CREATE TABLE "MenuFile" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "week" INTEGER NOT NULL,
     "fileName" TEXT NOT NULL,
     "filePath" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "MenuFile_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
