@@ -8,13 +8,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  
-  // Optional direct URL (without connection pooling)
-  // directUrl is optional and only needed for specific cases
-  // directUrl = env("DIRECT_URL")
-  
-  // Enable SSL for secure connections
-  // Note: Neon requires SSL for connections
+  directUrl = env("DATABASE_URL")  // Required for Neon
   relationMode = "prisma"
 }
 
