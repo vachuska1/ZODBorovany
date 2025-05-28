@@ -6,10 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")  // Connection URL with connection pooling
-  directUrl = env("DIRECT_URL")     // Direct connection URL without pooling
-  relationMode = "prisma"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")  // Connection URL
 }
 
 model MenuFile {

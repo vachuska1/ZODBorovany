@@ -7,17 +7,17 @@ const globalForPrisma = globalThis as unknown as {
 
 // Create a function to get the database URL
 function getDatabaseUrl() {
-  // Always use DATABASE_URL if it's set
-  if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL
+  // In production, use the Neon connection string
+  if (process.env.NODE_ENV === 'production') {
+    // Use the direct connection string for writes
+    if (process.env.DATABASE_URL) {
+      return process.env.DATABASE_URL
+    }
+    throw new Error('DATABASE_URL is required in production')
   }
   
-  // Fallback to SQLite for local development if no DATABASE_URL is set
-  if (process.env.NODE_ENV !== 'production') {
-    return 'file:./prisma/dev.db'
-  }
-  
-  throw new Error('DATABASE_URL is required in production')
+  // In development, use the local SQLite database
+  return 'file:./prisma/dev.db'
 }
 
 // Create a single Prisma Client instance
