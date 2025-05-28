@@ -3,6 +3,7 @@ import { writeFile, mkdir, unlink } from "fs/promises"
 import { existsSync } from "fs"
 import path from "path"
 import prisma from "@/lib/db"
+import { uploadToCloudinary } from "@/lib/cloudinary"
 
 // Directory where menu files will be stored
 // In Vercel, we need to use /tmp for file uploads in production
@@ -90,20 +91,29 @@ export async function POST(request: NextRequest) {
     const filename = generateUniqueFilename(fileData.name)
     const filePath = path.join(UPLOAD_DIR, filename)
     
-    // In production on Vercel, we need to handle files differently
-    // We'll just store the file metadata in the database
-    // and bypass actual file storage since Vercel has a read-only filesystem
-    const publicPath = `/menu-uploads/${filename}`
+    // Convert file to buffer for upload
+    const bytes = await fileData.arrayBuffer()
+    const buffer = Buffer.from(bytes)
     
-    // For production, we'll skip the physical file save and just update the database
-    // This works because Vercel deployments are ephemeral and cannot write to the filesystem permanently
-    if (process.env.NODE_ENV === 'production') {
-      console.log('Skipping physical file save in production, just updating database')
-    } else {
-      // Save the file to disk in development
-      const bytes = await fileData.arrayBuffer()
-      const buffer = Buffer.from(bytes)
-      await writeFile(filePath, buffer)
+    // Upload to Cloudinary
+    let cloudinaryUrl = ''
+    let publicPath = ''
+    
+    try {
+      console.log('Uploading to Cloudinary...')
+      const cloudinaryResult = await uploadToCloudinary(buffer, fileData.name) as any
+      
+      // Get the secure URL from Cloudinary
+      cloudinaryUrl = cloudinaryResult.secure_url
+      publicPath = cloudinaryUrl
+      
+      console.log('Successfully uploaded to Cloudinary:', publicPath)
+    } catch (uploadError) {
+      console.error('Error uploading to Cloudinary:', uploadError)
+      return NextResponse.json(
+        { success: false, message: "Nastala chyba při nahrávání souboru na Cloudinary." },
+        { status: 500 }
+      )
     }
 
     try {
@@ -120,29 +130,17 @@ export async function POST(request: NextRequest) {
           where: { week: weekNumber },
           data: {
             fileName: fileData.name,
-            filePath: publicPath,
+            cloudinaryUrl: cloudinaryUrl,
           }
         })
 
-        // In production, we can't clean up old files
-        // Only attempt cleanup in development environment
-        if (process.env.NODE_ENV !== 'production' && existingMenu.filePath && existingMenu.filePath !== publicPath) {
-          try {
-            const oldFilePath = path.join(process.cwd(), 'public', existingMenu.filePath)
-            if (existsSync(oldFilePath)) {
-              await unlink(oldFilePath)
-            }
-          } catch (cleanupError) {
-            console.error("Error cleaning up old file:", cleanupError)
-            // Don't fail the request if cleanup fails
-          }
-        }
       } else {
         // Create new menu
         await prisma.menuFile.create({
           data: {
             week: weekNumber,
             fileName: fileData.name,
+            cloudinaryUrl: cloudinaryUrl,
             filePath: publicPath,
           }
         })

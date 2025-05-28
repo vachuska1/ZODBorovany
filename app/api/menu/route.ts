@@ -5,6 +5,7 @@ interface MenuItem {
   week: number
   fileName: string | null
   filePath: string | null
+  cloudinaryUrl?: string | null
 }
 
 interface DatabaseError extends Error {
@@ -35,19 +36,20 @@ export async function GET() {
     // Ensure we always return both weeks, with null for missing ones
     const result: MenuItem[] = [1, 2].map(week => {
       const menuItem = menus.find(m => m.week === week);
-      let filePath = menuItem?.filePath || null;
       
-      // For production environment, ensure we use the default file path if needed
-      // since we can't actually store uploaded files on Vercel's filesystem
-      if (process.env.NODE_ENV === 'production' && menuItem?.fileName) {
-        // Use default file path with a query parameter to force refresh
-        filePath = `/menu/week${week}.pdf?name=${encodeURIComponent(menuItem.fileName)}&t=${Date.now()}`;
+      // Prioritize Cloudinary URLs if available
+      let filePath = menuItem?.cloudinaryUrl || menuItem?.filePath || null;
+      
+      // If no Cloudinary URL and no file path, use default file path
+      if (!filePath) {
+        filePath = `/menu/week${week}.pdf`;
       }
       
       return {
         week,
         fileName: menuItem?.fileName || null,
         filePath: filePath,
+        cloudinaryUrl: menuItem?.cloudinaryUrl || null
       };
     })
 
