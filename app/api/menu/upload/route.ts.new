@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        message: "Nahrávání souborů je v produkčním prostředí zakázáno. Použijte správu souborů v administraci." 
+        message: "Nahrávání souborů je v produkčním prostřední zakázáno. Použijte správu souborů v administraci." 
       },
       { status: 403 }
     )
@@ -168,7 +168,7 @@ export async function GET() {
 
     // Ensure we always return both weeks, with null for missing ones
     const result = [1, 2].map(week => {
-      const menu = menus.find((m: { week: number }) => m.week === week)
+      const menu = menus.find(m => m.week === week)
       return {
         week,
         fileName: menu?.fileName || null,
