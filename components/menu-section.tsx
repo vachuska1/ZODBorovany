@@ -8,6 +8,7 @@ interface MenuFile {
   week: number
   fileName: string | null
   filePath: string | null
+  cloudinaryUrl?: string | null
 }
 
 interface MenuCardProps {
@@ -26,22 +27,22 @@ function MenuCard({ week, title, menuFile, onRefresh, isLoading: parentIsLoading
   // Set the PDF URL on the client side to prevent hydration mismatch
   useEffect(() => {
     if (menuFile?.filePath) {
-      // Use the uploaded file if available
-      // The URL might already contain a timestamp from the API
-      if (menuFile.filePath.includes('?')) {
-        setPdfUrl(menuFile.filePath)
+      // If the filePath is a Cloudinary URL, use it directly
+      if (menuFile.filePath.startsWith('http')) {
+        setPdfUrl(menuFile.filePath);
       } else {
-        const timestamp = Date.now()
-        setPdfUrl(`${menuFile.filePath}?t=${timestamp}`)
+        // For local files, add a timestamp to prevent caching
+        const timestamp = Date.now();
+        setPdfUrl(`${menuFile.filePath}?t=${timestamp}`);
       }
-      setIsLoading(true)
+      setIsLoading(true);
     } else {
       // Fallback to default file
-      const timestamp = Date.now()
-      setPdfUrl(`/menu/week${week}.pdf?t=${timestamp}`)
-      setIsLoading(true)
+      const timestamp = Date.now();
+      setPdfUrl(`/menu/week${week}.pdf?t=${timestamp}`);
+      setIsLoading(true);
     }
-    setError('')
+    setError('');
   }, [menuFile, week])
 
   const handleLoad = () => {
@@ -59,9 +60,9 @@ function MenuCard({ week, title, menuFile, onRefresh, isLoading: parentIsLoading
     onRefresh()
   }
 
-  const displayUrl = menuFile?.filePath || `/menu/week${week}.pdf`
+  const displayUrl = menuFile?.cloudinaryUrl || menuFile?.filePath || `/menu/week${week}.pdf`
   // Check if using default file or if in production (where we use default files anyway)
-  const isDefaultFile = !menuFile?.filePath || (process.env.NODE_ENV === 'production' && menuFile?.filePath?.includes(`/menu/week${week}.pdf`))
+  const isDefaultFile = !menuFile?.cloudinaryUrl && (!menuFile?.filePath || (process.env.NODE_ENV === 'production' && menuFile?.filePath?.includes(`/menu/week${week}.pdf`)))
 
   return (
     <Card className="border-2 hover:shadow-lg transition-shadow w-full flex flex-col">

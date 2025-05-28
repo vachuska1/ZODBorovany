@@ -131,9 +131,9 @@ export async function POST(request: NextRequest) {
           data: {
             fileName: fileData.name,
             cloudinaryUrl: cloudinaryUrl,
+            filePath: `/menu/week${weekNumber}.pdf` // Keep the local path for backward compatibility
           }
         })
-
       } else {
         // Create new menu
         await prisma.menuFile.create({
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
             week: weekNumber,
             fileName: fileData.name,
             cloudinaryUrl: cloudinaryUrl,
-            filePath: publicPath,
+            filePath: `/menu/week${weekNumber}.pdf` // Keep the local path for backward compatibility
           }
         })
       }

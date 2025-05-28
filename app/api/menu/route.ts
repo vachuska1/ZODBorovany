@@ -37,19 +37,24 @@ export async function GET() {
     const result: MenuItem[] = [1, 2].map(week => {
       const menuItem = menus.find(m => m.week === week);
       
-      // Prioritize Cloudinary URLs if available
-      let filePath = menuItem?.cloudinaryUrl || menuItem?.filePath || null;
-      
-      // If no Cloudinary URL and no file path, use default file path
-      if (!filePath) {
-        filePath = `/menu/week${week}.pdf`;
+      // If we have a Cloudinary URL, use it as the primary path
+      if (menuItem?.cloudinaryUrl) {
+        return {
+          week,
+          fileName: menuItem.fileName,
+          filePath: menuItem.cloudinaryUrl, // Use Cloudinary URL as the primary path
+          cloudinaryUrl: menuItem.cloudinaryUrl
+        };
       }
+      
+      // Fallback to local file path or default
+      const filePath = menuItem?.filePath || `/menu/week${week}.pdf`;
       
       return {
         week,
         fileName: menuItem?.fileName || null,
         filePath: filePath,
-        cloudinaryUrl: menuItem?.cloudinaryUrl || null
+        cloudinaryUrl: null
       };
     })
 
