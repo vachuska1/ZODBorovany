@@ -7,21 +7,17 @@ const globalForPrisma = globalThis as unknown as {
 
 // Create a function to get the database URL
 function getDatabaseUrl() {
-  // In production, use the pooled connection URL
-  if (process.env.NODE_ENV === 'production') {
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL is required in production')
-    }
+  // Always use DATABASE_URL if it's set
+  if (process.env.DATABASE_URL) {
     return process.env.DATABASE_URL
   }
   
-  // In development, use the direct URL if available, otherwise fallback to SQLite
-  if (process.env.DIRECT_URL) {
-    return process.env.DIRECT_URL
+  // Fallback to SQLite for local development if no DATABASE_URL is set
+  if (process.env.NODE_ENV !== 'production') {
+    return 'file:./prisma/dev.db'
   }
   
-  // Fallback to SQLite for local development
-  return 'file:./prisma/dev.db'
+  throw new Error('DATABASE_URL is required in production')
 }
 
 // Create a single Prisma Client instance
