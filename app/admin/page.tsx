@@ -13,7 +13,8 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [message, setMessage] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null)
+  const isProduction = process.env.NODE_ENV === 'production'
 
   // Check authentication status on component mount
   useEffect(() => {
@@ -22,6 +23,12 @@ export default function AdminPage() {
         const response = await fetch('/api/auth/check')
         if (response.ok) {
           setIsAuthenticated(true)
+          if (isProduction) {
+            setMessage({
+              type: 'info',
+              text: 'Nahrávání souborů je v produkčním prostředí zakázáno. Pro správu souborů použijte administrační rozhraní.'
+            })
+          }
         } else {
           router.push('/login')
         }
@@ -34,7 +41,7 @@ export default function AdminPage() {
     }
 
     checkAuth()
-  }, [router])
+  }, [router, isProduction])
 
   const handleLogout = async () => {
     try {
@@ -47,6 +54,14 @@ export default function AdminPage() {
 
   const handleMenuUpload = async (week: number, file: File) => {
     if (!file) return
+    
+    if (isProduction) {
+      setMessage({
+        type: 'info',
+        text: 'Nahrávání souborů je v produkčním prostředí zakázáno. Pro správu souborů použijte administrační rozhraní.'
+      })
+      return
+    }
     
     setUploading(true)
     setMessage(null)
@@ -118,44 +133,59 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <div>
-                <Label htmlFor="week1">Menu pro 1. týden</Label>
-                <div className="mt-2 flex items-center">
-                  <Input
-                    id="week1"
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => handleFileChange(1, e)}
-                    disabled={uploading}
-                    className="flex-1"
-                  />
+              {!isProduction ? (
+                <>
+                  <div>
+                    <Label htmlFor="week1">Menu pro 1. týden</Label>
+                    <div className="mt-2 flex items-center">
+                      <Input
+                        id="week1"
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => handleFileChange(1, e)}
+                        disabled={uploading}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="week2">Menu pro 2. týden</Label>
+                    <div className="mt-2 flex items-center">
+                      <Input
+                        id="week2"
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => handleFileChange(2, e)}
+                        disabled={uploading}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="p-4 bg-blue-50 text-blue-800 rounded-md">
+                  <p className="font-medium">Nahrávání souborů je v produkčním prostředí zakázáno.</p>
+                  <p className="mt-2 text-sm">Pro správu souborů použijte administrační rozhraní.</p>
                 </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="week2">Menu pro 2. týden</Label>
-                <div className="mt-2 flex items-center">
-                  <Input
-                    id="week2"
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => handleFileChange(2, e)}
-                    disabled={uploading}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
+              )}
               
               {message && (
                 <div className={`p-4 rounded-md ${
-                  message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                  message.type === 'success' 
+                    ? 'bg-green-50 text-green-800' 
+                    : message.type === 'error'
+                    ? 'bg-red-50 text-red-800'
+                    : 'bg-blue-50 text-blue-800'
                 }`}>
                   <div className="flex">
                     <div className="flex-shrink-0">
                       {message.type === 'success' ? (
                         <CheckCircle className="h-5 w-5 text-green-400" />
-                      ) : (
+                      ) : message.type === 'error' ? (
                         <AlertCircle className="h-5 w-5 text-red-400" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-blue-400" />
                       )}
                     </div>
                     <div className="ml-3">
