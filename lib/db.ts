@@ -20,25 +20,16 @@ function getDatabaseUrl() {
   throw new Error('DATABASE_URL is required in production')
 }
 
-// Create a single Prisma Client instance with connection pooling
+// Create a single Prisma Client instance
 const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  datasourceUrl: getDatabaseUrl(),
   log: process.env.NODE_ENV === 'development' 
     ? ['query', 'error', 'warn'] 
     : ['error'],
-  // Add connection pooling configuration
   datasources: {
     db: {
-      url: getDatabaseUrl()
+      url: process.env.DATABASE_URL || getDatabaseUrl()
     }
-  },
-  // Add retry logic
-  rejectOnNotFound: true,
-  __internal: {
-    engine: {
-      enableEngineDebugMode: process.env.NODE_ENV === 'development',
-    },
-  },
+  }
 })
 
 // Enable Prisma Client's connection pooling in development
