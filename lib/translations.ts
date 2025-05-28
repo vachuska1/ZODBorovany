@@ -55,7 +55,6 @@ export const translations = {
     canteenManager: "Vedoucí závodní kuchyně",
 
     // Footer
-    menu: "Menu",
     followUs: "Sledujte nás",
     allRightsReserved: "Všechna práva vyhrazena.",
 
@@ -125,7 +124,6 @@ export const translations = {
     canteenManager: "Canteen Manager",
 
     // Footer
-    menu: "Menu",
     followUs: "Follow Us",
     allRightsReserved: "All rights reserved.",
 
@@ -195,7 +193,6 @@ export const translations = {
     canteenManager: "Kantinenleiterin",
 
     // Footer
-    menu: "Menu",
     followUs: "Folgen Sie uns",
     allRightsReserved: "Alle Rechte vorbehalten.",
 
