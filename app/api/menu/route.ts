@@ -1,75 +1,48 @@
 import { NextResponse } from "next/server"
-import prisma from "@/lib/db"
+import { existsSync } from "fs"
+import path from "path"
 
 interface MenuItem {
   week: number
   fileName: string | null
   filePath: string | null
-  cloudinaryUrl?: string | null
-}
-
-interface DatabaseError extends Error {
-  code?: string
 }
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
 
 export async function GET() {
   try {
-    console.log("Attempting to fetch menu files...")
+    const MENU_DIR = path.join(process.cwd(), 'public', 'menu')
+    const timestamp = Date.now()
     
-    let menus: any[] = []
-    try {
-      // Try to fetch from database
-      menus = await prisma.menuFile.findMany({
-        orderBy: { week: 'asc' },
-      })
-      console.log("Fetched menus from database:", menus)
-    } catch (error) {
-      const dbError = error as DatabaseError
-      console.error("Database error:", dbError)
-      // Continue with empty array if database is not available
-      menus = []
-    }
-
-    // Ensure we always return both weeks, with null for missing ones
-    const result: MenuItem[] = [1, 2].map(week => {
-      const menuItem = menus.find(m => m.week === week);
-      
-      // If we have a Cloudinary URL, use it as the primary path
-      if (menuItem?.cloudinaryUrl) {
-        return {
-          week,
-          fileName: menuItem.fileName,
-          filePath: menuItem.cloudinaryUrl, // Use Cloudinary URL as the primary path
-          cloudinaryUrl: menuItem.cloudinaryUrl
-        };
-      }
-      
-      // Fallback to local file path or default
-      const filePath = menuItem?.filePath || `/menu/week${week}.pdf`;
+    // Check which menu files exist and return their paths
+    const result = [1, 2].map(week => {
+      const filename = `week${week}.pdf`
+      const filePath = path.join(MENU_DIR, filename)
+      const exists = existsSync(filePath)
       
       return {
         week,
-        fileName: menuItem?.fileName || null,
-        filePath: filePath,
-        cloudinaryUrl: null
-      };
-    })
-
-    return NextResponse.json({ success: true, data: result })
-  } catch (error: unknown) {
-    console.error("Error in menu API route:", error)
+        fileName: exists ? filename : null,
+        filePath: exists ? `/menu/${filename}?t=${timestamp}` : null
+      }
+    });
     
-    // Return default menu structure for any error
-    console.log("Using default menu structure due to error")
+    return NextResponse.json({ 
+      success: true, 
+      data: result 
+    });
+    
+  } catch (error) {
+    console.error("Error in GET /api/menu:", error);
+    
+    // Return empty structure if there's an error
     return NextResponse.json({
-      success: true,
+      success: false,
       data: [
-        { week: 1, fileName: null, filePath: null },
-        { week: 2, fileName: null, filePath: null }
+        { week: 1, fileName: null, filePath: "/menu/week1.pdf" },
+        { week: 2, fileName: null, filePath: "/menu/week2.pdf" }
       ]
-    })
+    });
   }
 }

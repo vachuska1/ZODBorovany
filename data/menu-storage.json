@@ -1,0 +1,16 @@
+[
+  {
+    "week": 1,
+    "fileName": "week4.pdf",
+    "cloudinaryUrl": "https://res.cloudinary.com/ddoo18o6y/image/upload/v1748435673/zod-borovany-menu/menu-1748435673455.pdf",
+    "filePath": "/menu/week1.pdf",
+    "updatedAt": "2025-05-28T12:34:34.993Z"
+  },
+  {
+    "week": 2,
+    "fileName": "week3.pdf",
+    "cloudinaryUrl": "https://res.cloudinary.com/ddoo18o6y/image/upload/v1748435677/zod-borovany-menu/menu-1748435678050.pdf",
+    "filePath": "/menu/week2.pdf",
+    "updatedAt": "2025-05-28T12:34:38.742Z"
+  }
+]

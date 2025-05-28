@@ -1,47 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { writeFile, mkdir, unlink } from "fs/promises"
+import { writeFile, mkdir } from "fs/promises"
 import { existsSync } from "fs"
 import path from "path"
-import prisma from "@/lib/db"
-import { uploadToCloudinary } from "@/lib/cloudinary"
 
 // Directory where menu files will be stored
-// In Vercel, we need to use /tmp for file uploads in production
-const UPLOAD_DIR = process.env.NODE_ENV === 'production'
-  ? path.join('/tmp', 'menu-uploads') // Use /tmp in production (Vercel)
-  : path.join(process.cwd(), 'public', 'menu-uploads') // Use public directory in development
+const MENU_DIR = path.join(process.cwd(), 'public', 'menu')
 
-// Enable file uploads in production for admin users
-const isProduction = false // Permanently enable uploads for admin users
-
-// Ensure upload directory exists
-async function ensureUploadDir() {
-  if (!existsSync(UPLOAD_DIR)) {
-    await mkdir(UPLOAD_DIR, { recursive: true })
+// Ensure menu directory exists
+async function ensureMenuDir() {
+  if (!existsSync(MENU_DIR)) {
+    await mkdir(MENU_DIR, { recursive: true })
   }
-  return UPLOAD_DIR
-}
-
-// Generate a unique filename with timestamp
-function generateUniqueFilename(originalName: string): string {
-  const timestamp = Date.now()
-  const ext = path.extname(originalName)
-  const baseName = path.basename(originalName, ext).replace(/[^a-zA-Z0-9-_]/g, '')
-  return `${baseName}-${timestamp}${ext}`
+  return MENU_DIR
 }
 
 export async function POST(request: NextRequest) {
-  // In production, disable direct file uploads for security
-  if (isProduction) {
-    return NextResponse.json(
-      { 
-        success: false,
-        message: 'Nahrávání souborů je v produkčním prostředí zakázáno. Použijte správu souborů v administraci.'
-      },
-      { status: 403 }
-    )
-  }
-
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -84,97 +57,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Ensure upload directory exists
-    await ensureUploadDir()
+    // Ensure menu directory exists
+    await ensureMenuDir()
 
-    // Generate unique filename and paths
-    const filename = generateUniqueFilename(fileData.name)
-    const filePath = path.join(UPLOAD_DIR, filename)
+    // Save file to public/menu directory
+    const filename = `week${weekNumber}.pdf`
+    const filePath = path.join(MENU_DIR, filename)
     
-    // Convert file to buffer for upload
+    // Convert file to buffer and save
     const bytes = await fileData.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    await writeFile(filePath, Buffer.from(bytes))
     
-    // Upload to Cloudinary
-    let cloudinaryUrl = ''
-    let publicPath = ''
-    
-    try {
-      console.log('Uploading to Cloudinary...')
-      const cloudinaryResult = await uploadToCloudinary(buffer, fileData.name) as any
-      
-      // Get the secure URL from Cloudinary
-      cloudinaryUrl = cloudinaryResult.secure_url
-      publicPath = cloudinaryUrl
-      
-      console.log('Successfully uploaded to Cloudinary:', publicPath)
-    } catch (uploadError) {
-      console.error('Error uploading to Cloudinary:', uploadError)
-      return NextResponse.json(
-        { success: false, message: "Nastala chyba při nahrávání souboru na Cloudinary." },
-        { status: 500 }
-      )
-    }
-
-    try {
-
-      // Check if a menu already exists for this week
-      const existingMenu = await prisma.menuFile.findUnique({
-        where: { week: weekNumber }
-      })
-
-      // Save to database
-      if (existingMenu) {
-        // Update existing menu
-        await prisma.menuFile.update({
-          where: { week: weekNumber },
-          data: {
-            fileName: fileData.name,
-            cloudinaryUrl: cloudinaryUrl,
-            filePath: `/menu/week${weekNumber}.pdf` // Keep the local path for backward compatibility
-          }
-        })
-      } else {
-        // Create new menu
-        await prisma.menuFile.create({
-          data: {
-            week: weekNumber,
-            fileName: fileData.name,
-            cloudinaryUrl: cloudinaryUrl,
-            filePath: `/menu/week${weekNumber}.pdf` // Keep the local path for backward compatibility
-          }
-        })
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: `Menu pro týden ${weekNumber} bylo úspěšně nahráno`,
-        filePath: publicPath,
-      })
-
-    } catch (error) {
-      // If database operation fails, clean up the uploaded file
-      try {
-        if (existsSync(filePath)) {
-          await unlink(filePath)
-        }
-      } catch (cleanupError) {
-        console.error("Error cleaning up after database error:", cleanupError)
-      }
-      
-      // Log detailed error information
-      const dbError = error as Error;
-      console.error("Database error details:", {
-        error: dbError,
-        message: dbError.message || 'No message',
-        stack: dbError.stack || 'No stack trace'
-      })
-      
-      return NextResponse.json(
-        { success: false, message: `Nastala chyba při ukládání do databáze: ${dbError.message || 'Neznámá chyba'}` },
-        { status: 500 }
-      )
-    }
+    return NextResponse.json({
+      success: true,
+      message: `Menu pro týden ${weekNumber} bylo úspěšně nahráno`,
+      filePath: `/menu/${filename}`,
+    })
   } catch (error) {
     console.error("Error in file upload:", error)
     return NextResponse.json(
@@ -184,31 +82,31 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint to retrieve current menu files
+// GET endpoint to check if menu files exist
 export async function GET() {
   try {
-    const menus = await prisma.menuFile.findMany({
-      orderBy: { week: 'asc' },
-    })
-
-    // Ensure we always return both weeks, with null for missing ones
+    // Check which menu files exist
     const result = [1, 2].map(week => {
-      const menu = menus.find((m: { week: number }) => m.week === week)
+      const filename = `week${week}.pdf`
+      const filePath = path.join(MENU_DIR, filename)
+      const exists = existsSync(filePath)
+      
       return {
         week,
-        fileName: menu?.fileName || null,
-        filePath: menu?.filePath || null,
+        fileName: exists ? filename : null,
+        filePath: exists ? `/menu/${filename}?t=${Date.now()}` : null,
+        updatedAt: exists ? new Date().toISOString() : null
       }
-    })
+    });
 
-    return NextResponse.json(result)
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching menu files:", error)
+    console.error("Error checking menu files:", error);
     
-    // Return empty structure if database is not available
+    // Return empty structure if there's an error
     return NextResponse.json([
-      { week: 1, fileName: null, filePath: null },
-      { week: 2, fileName: null, filePath: null }
-    ])
+      { week: 1, fileName: null, filePath: null, updatedAt: null },
+      { week: 2, fileName: null, filePath: null, updatedAt: null }
+    ]);
   }
 }

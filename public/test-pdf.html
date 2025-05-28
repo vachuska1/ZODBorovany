@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test PDF Viewer</title>
+  <style>
+    body { 
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .pdf-container {
+      width: 100%;
+      height: 800px;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+    }
+    .pdf-embed {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Test PDF Viewer</h1>
+    <p>This page tests if PDFs can be displayed in your browser.</p>
+    
+    <h2>Option 1: Direct PDF Link</h2>
+    <p>
+      <a href="https://res.cloudinary.com/ddoo18o6y/image/upload/v1748426153/zod-borovany-menu/menu-1748426153214.pdf" target="_blank">
+        Open PDF in new tab
+      </a>
+    </p>
+    
+    <h2>Option 2: PDF in iframe</h2>
+    <div class="pdf-container">
+      <iframe 
+        src="https://res.cloudinary.com/ddoo18o6y/image/upload/v1748426153/zod-borovany-menu/menu-1748426153214.pdf" 
+        class="pdf-embed"
+      ></iframe>
+    </div>
+    
+    <h2>Option 3: PDF in embed tag</h2>
+    <div class="pdf-container">
+      <embed 
+        src="https://res.cloudinary.com/ddoo18o6y/image/upload/v1748426153/zod-borovany-menu/menu-1748426153214.pdf" 
+        type="application/pdf"
+        class="pdf-embed"
+      />
+    </div>
+    
+    <h2>Option 4: Google Docs Viewer</h2>
+    <div class="pdf-container">
+      <iframe 
+        src="https://docs.google.com/viewer?url=https://res.cloudinary.com/ddoo18o6y/image/upload/v1748426153/zod-borovany-menu/menu-1748426153214.pdf&embedded=true" 
+        class="pdf-embed"
+      ></iframe>
+    </div>
+  </div>
+</body>
+</html>
