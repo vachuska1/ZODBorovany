@@ -7,8 +7,8 @@ import prisma from "@/lib/db"
 // Directory where menu files will be stored
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'menu-uploads')
 
-// In production, consider using a cloud storage service like AWS S3 or Vercel Blob Storage
-const useCloudStorage = process.env.NODE_ENV === 'production'
+// In production, we disable direct file uploads for security
+const isProduction = process.env.NODE_ENV === 'production'
 
 // Ensure upload directory exists
 async function ensureUploadDir() {
@@ -27,28 +27,34 @@ function generateUniqueFilename(originalName: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  // In production, disable uploads if using cloud storage
-  if (useCloudStorage) {
+  // In production, disable direct file uploads for security
+  if (isProduction) {
     return NextResponse.json(
       { 
-        success: false, 
-        message: "Nahrávání souborů je v produkčním prostředí zakázáno. Použijte správu souborů v administraci." 
+        success: false,
+        message: 'Nahrávání souborů je v produkčním prostředí zakázáno. Použijte správu souborů v administraci.'
       },
       { status: 403 }
     )
   }
 
   try {
-    const data = await request.formData()
-    const file: File | null = data.get("file") as unknown as File
-    const weekNumber = parseInt(data.get("week") as string)
+    const formData = await request.formData()
+    const file = formData.get('file') as File | null
+    const week = formData.get('week')
 
-    if (!file) {
+    if (!file || !week) {
       return NextResponse.json(
-        { success: false, message: "Nebyl nahrán žádný soubor" },
+        { 
+          success: false, 
+          message: "Chybí povinné údaje. Prosím, vyberte soubor a zadejte číslo týdne." 
+        },
         { status: 400 }
       )
     }
+
+    const weekNumber = parseInt(week.toString())
+    const fileData = file as unknown as File
 
     if (isNaN(weekNumber) || weekNumber < 1 || weekNumber > 2) {
       return NextResponse.json(
@@ -58,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check file type
-    if (file.type !== 'application/pdf') {
+    if (fileData.type !== 'application/pdf') {
       return NextResponse.json(
         { success: false, message: "Nepodporovaný typ souboru. Povoleny jsou pouze PDF soubory." },
         { status: 400 }
@@ -67,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     // Check file size (max 10MB)
     const maxSize = 10 * 1024 * 1024 // 10MB in bytes
-    if (file.size > maxSize) {
+    if (fileData.size > maxSize) {
       return NextResponse.json(
         { success: false, message: "Soubor je příliš velký. Maximální velikost je 10 MB." },
         { status: 400 }
@@ -78,13 +84,13 @@ export async function POST(request: NextRequest) {
     await ensureUploadDir()
 
     // Generate unique filename and paths
-    const filename = generateUniqueFilename(file.name)
+    const filename = generateUniqueFilename(fileData.name)
     const filePath = path.join(UPLOAD_DIR, filename)
     const publicPath = `/menu-uploads/${filename}`
 
     try {
       // Save the file
-      const bytes = await file.arrayBuffer()
+      const bytes = await fileData.arrayBuffer()
       const buffer = Buffer.from(bytes)
       await writeFile(filePath, buffer)
 
@@ -99,7 +105,7 @@ export async function POST(request: NextRequest) {
         await prisma.menuFile.update({
           where: { week: weekNumber },
           data: {
-            fileName: file.name,
+            fileName: fileData.name,
             filePath: publicPath,
           }
         })
@@ -121,7 +127,7 @@ export async function POST(request: NextRequest) {
         await prisma.menuFile.create({
           data: {
             week: weekNumber,
-            fileName: file.name,
+            fileName: fileData.name,
             filePath: publicPath,
           }
         })
@@ -149,7 +155,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
   } catch (error) {
     console.error("Error in file upload:", error)
     return NextResponse.json(
