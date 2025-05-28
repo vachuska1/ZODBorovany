@@ -14,7 +14,8 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null)
-  const isProduction = false // Temporarily disabled for testing
+  // Enable file uploads in admin interface for authorized users
+  const isProduction = false // Permanently enable uploads for admin users
 
   // Check authentication status on component mount
   useEffect(() => {

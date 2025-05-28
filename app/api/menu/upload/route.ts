@@ -7,8 +7,8 @@ import prisma from "@/lib/db"
 // Directory where menu files will be stored
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'menu-uploads')
 
-// Temporarily enable uploads in production for testing
-const isProduction = false // Temporarily disabled for testing
+// Enable file uploads in production for admin users
+const isProduction = false // Permanently enable uploads for admin users
 
 // Ensure upload directory exists
 async function ensureUploadDir() {
