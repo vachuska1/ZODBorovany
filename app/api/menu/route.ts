@@ -33,11 +33,23 @@ export async function GET() {
     }
 
     // Ensure we always return both weeks, with null for missing ones
-    const result: MenuItem[] = [1, 2].map(week => ({
-      week,
-      fileName: menus.find(m => m.week === week)?.fileName || null,
-      filePath: menus.find(m => m.week === week)?.filePath || null,
-    }))
+    const result: MenuItem[] = [1, 2].map(week => {
+      const menuItem = menus.find(m => m.week === week);
+      let filePath = menuItem?.filePath || null;
+      
+      // For production environment, ensure we use the default file path if needed
+      // since we can't actually store uploaded files on Vercel's filesystem
+      if (process.env.NODE_ENV === 'production' && menuItem?.fileName) {
+        // Use default file path with a query parameter to force refresh
+        filePath = `/menu/week${week}.pdf?name=${encodeURIComponent(menuItem.fileName)}&t=${Date.now()}`;
+      }
+      
+      return {
+        week,
+        fileName: menuItem?.fileName || null,
+        filePath: filePath,
+      };
+    })
 
     return NextResponse.json({ success: true, data: result })
   } catch (error: unknown) {

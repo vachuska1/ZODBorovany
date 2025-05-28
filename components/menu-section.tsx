@@ -27,8 +27,13 @@ function MenuCard({ week, title, menuFile, onRefresh, isLoading: parentIsLoading
   useEffect(() => {
     if (menuFile?.filePath) {
       // Use the uploaded file if available
-      const timestamp = Date.now()
-      setPdfUrl(`${menuFile.filePath}?t=${timestamp}`)
+      // The URL might already contain a timestamp from the API
+      if (menuFile.filePath.includes('?')) {
+        setPdfUrl(menuFile.filePath)
+      } else {
+        const timestamp = Date.now()
+        setPdfUrl(`${menuFile.filePath}?t=${timestamp}`)
+      }
       setIsLoading(true)
     } else {
       // Fallback to default file
@@ -55,7 +60,8 @@ function MenuCard({ week, title, menuFile, onRefresh, isLoading: parentIsLoading
   }
 
   const displayUrl = menuFile?.filePath || `/menu/week${week}.pdf`
-  const isDefaultFile = !menuFile?.filePath
+  // Check if using default file or if in production (where we use default files anyway)
+  const isDefaultFile = !menuFile?.filePath || (process.env.NODE_ENV === 'production' && menuFile?.filePath?.includes(`/menu/week${week}.pdf`))
 
   return (
     <Card className="border-2 hover:shadow-lg transition-shadow w-full flex flex-col">
