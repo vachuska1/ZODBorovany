@@ -8,6 +8,13 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  
+  // Enable connection pooling for better performance
+  directUrl = env("DIRECT_URL")
+  
+  // Enable SSL for secure connections
+  // Note: Neon requires SSL for connections
+  relationMode = "prisma"
 }
 
 model MenuFile {

@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { writeFile, mkdir, unlink } from "fs/promises"
 import { existsSync } from "fs"
 import path from "path"
-import { prisma } from "@/lib/db"
+import prisma from "@/lib/db"
 
 // Directory where menu files will be stored
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'menu-uploads')
